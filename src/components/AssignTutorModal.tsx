@@ -107,8 +107,8 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
       <Space direction="vertical" style={{ width: "100%" }} size="large">
         <Card size="small">
           <Title level={5}>Enquiry Details</Title>
-          <Text><strong>Student:</strong> {enquiry?.student_name}</Text><br />
-          <Text><strong>Email:</strong> {enquiry?.student_email}</Text><br />
+          <Text><strong>Booking Owner:</strong> {enquiry?.first_name}{" "}{enquiry?.last_name}</Text><br />
+          <Text><strong>Email:</strong> {enquiry?.email}</Text><br />
           <Text><strong>Instrument:</strong> {enquiry?.instrument}</Text><br />
           <Text><strong>Level:</strong> {enquiry?.level}</Text><br />
           <Text><strong>Location:</strong> {enquiry?.location}</Text><br />

@@ -7,6 +7,7 @@ import { ConfigProvider, Button } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import routerProvider from "@refinedev/nextjs-router";
 import { supabaseClient } from "@/lib/supabase";
+
 import "@refinedev/antd/dist/reset.css";
 
 export default function DashboardPage() {

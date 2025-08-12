@@ -26,6 +26,9 @@ export interface Student {
 }
 
 export interface Enquiry {
+  email: string;
+  last_name: string;
+  first_name: string;
   id: string;
   student_name: string;
   student_email: string;
