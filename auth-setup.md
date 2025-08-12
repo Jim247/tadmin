@@ -29,6 +29,28 @@ In your Supabase dashboard:
 2. Click **Add User**
 3. Enter your admin email and password
 4. Click **Create User**
+5. **Set admin role**: Go to **SQL Editor** and run:
+```sql
+UPDATE users 
+SET role = 'admin' 
+WHERE email = 'your-admin-email@example.com';
+```
+
+## 2b. Create Tutor Users (when ready)
+
+When you want to give a tutor limited access:
+1. Create auth user in Supabase
+2. Link them to their tutor record:
+```sql
+UPDATE users 
+SET role = 'tutor', booking_owner_id = (SELECT id FROM tutors WHERE email = 'tutor@example.com')
+WHERE email = 'tutor@example.com';
+```
+
+**Access Levels:**
+- **Admin** (`role = 'admin'`): Full dashboard access to everything
+- **Tutor** (`role = 'tutor'`): Can only see their assigned enquiries  
+- **User** (`role = 'user'`): No dashboard access (booking owners use main site)
 
 ## 3. Optional: Restrict Signups
 
@@ -49,18 +71,45 @@ For security, disable public signups:
 Update your RLS policies to only allow authenticated users:
 
 ```sql
--- Update policies to require authentication
+-- Updated policies using users table
+-- These are already included in supabase-schema.sql
+-- Run only if you need to update existing policies
+
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON tutors;
-CREATE POLICY "Enable all access for authenticated users" ON tutors FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable all access for admin users only" ON tutors FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.id = auth.uid() 
+        AND users.admin = true
+    )
+);
 
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON students;
-CREATE POLICY "Enable all access for authenticated users" ON students FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable all access for admin users only" ON students FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.id = auth.uid() 
+        AND users.admin = true
+    )
+);
 
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON enquiries;
-CREATE POLICY "Enable all access for authenticated users" ON enquiries FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable all access for admin users only" ON enquiries FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.id = auth.uid() 
+        AND users.admin = true
+    )
+);
 
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON messages;
-CREATE POLICY "Enable all access for authenticated users" ON messages FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable all access for admin users only" ON messages FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.id = auth.uid() 
+        AND users.admin = true
+    )
+);
 ```
 
 ## 6. Production Deployment
