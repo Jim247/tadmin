@@ -7,7 +7,6 @@ import { ConfigProvider, Button } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import routerProvider from "@refinedev/nextjs-router";
 import { supabaseClient } from "@/lib/supabase";
-import { AuthWrapper } from "@/components/AuthWrapper";
 import "@refinedev/antd/dist/reset.css";
 
 export default function DashboardPage() {
@@ -16,7 +15,6 @@ export default function DashboardPage() {
   };
 
   return (
-    <AuthWrapper>
       <ConfigProvider theme={RefineThemes.Blue}>
         <Refine
           dataProvider={dataProvider(supabaseClient)}
@@ -80,6 +78,5 @@ export default function DashboardPage() {
           </ThemedLayoutV2>
         </Refine>
       </ConfigProvider>
-    </AuthWrapper>
   );
 }

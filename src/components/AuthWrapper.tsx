@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
 import { supabaseClient } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -14,6 +14,11 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/'];
+  const isPublicRoute = publicRoutes.includes(pathname);
 
   useEffect(() => {
     // Check current session
@@ -22,7 +27,8 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       setUser(session?.user ?? null);
       setLoading(false);
 
-      if (!session?.user) {
+      // Only redirect to login if we're not already on a public route
+      if (!session?.user && !isPublicRoute) {
         router.push('/login');
       }
     };
@@ -33,14 +39,14 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
-        if (event === 'SIGNED_OUT' || !session?.user) {
+        if ((event === 'SIGNED_OUT' || !session?.user) && !isPublicRoute) {
           router.push('/login');
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, isPublicRoute]);
 
   if (loading) {
     return (
@@ -55,6 +61,12 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     );
   }
 
+  // If it's a public route, always render the children
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
+
+  // For protected routes, only render if user is authenticated
   if (!user) {
     return null; // Will redirect to login
   }

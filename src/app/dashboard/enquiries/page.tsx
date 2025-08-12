@@ -1,28 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import { List, useTable, EditButton, ShowButton, DeleteButton } from "@refinedev/antd";
-import { Table, Space, Button, Tag } from "antd";
-import { useMany } from "@refinedev/core";
-import { MailOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import { Table, Space, Button, Tag, Spin } from "antd";
+import { MailOutlined, EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import { AssignTutorModal } from "@/components/AssignTutorModal";
+import { supabaseClient } from "@/lib/supabase";
 import { Enquiry } from "@/types";
+import formatUkDate from "@/utils/FormatUkDate";
+
 
 export default function EnquiriesList() {
-  const [assignModalVisible, setAssignModalVisible] = useState(false);
-  const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
+  console.log("🔥 EnquiriesList component is rendering!");
+  console.log("🔧 Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("🔑 Supabase Key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  
+  const { data: enquiries, isLoading, error } = useQuery({
+    queryKey: ["enquiries"],
+    queryFn: async () => {
+      console.log("🚀 Starting Supabase queries...");
+      
+      const { data: bookingOwners, error: bookingOwnersError } = await supabaseClient
+        .from("booking_owners")
+        .select("*");
+      console.log("📊 Booking owners data:", bookingOwners);
+      console.log("❌ Booking owners error:", bookingOwnersError);
 
-  const { tableProps, tableQuery } = useTable({
-    syncWithLocation: true,
-  });
+      const { data: students, error: studentsError } = await supabaseClient
+        .from("students")
+        .select("*");
+      console.log("👥 Students data:", students);
+      console.log("❌ Students error:", studentsError);
 
-  const { data: tutorData, isLoading: tutorIsLoading } = useMany({
-    resource: "tutors",
-    ids: tableProps?.dataSource?.map((item) => item?.tutor_id) ?? [],
-    queryOptions: {
-      enabled: !!tableProps?.dataSource,
+      if (bookingOwnersError || studentsError) {
+        const errorMsg = bookingOwnersError?.message || studentsError?.message;
+        console.error("💥 Throwing error:", errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      const combined = [...(bookingOwners || []), ...(students || [])];
+      console.log("✅ Combined enquiries:", combined);
+      return combined;
     },
   });
+
+
+  console.log("📋 Current React Query state:");
+  console.log("  - enquiries:", enquiries);
+  console.log("  - isLoading:", isLoading);
+  console.log("  - error:", error);
+
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
+  const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
 
   const handleAssign = (enquiry: Enquiry) => {
     setSelectedEnquiry(enquiry);
@@ -32,28 +61,45 @@ export default function EnquiriesList() {
   const handleAssignSuccess = () => {
     setAssignModalVisible(false);
     setSelectedEnquiry(null);
-    tableQuery.refetch();
   };
 
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error loading enquiries: {(error as Error).message}</div>;
+  }
+
   return (
-    <>
-      <List>
-        <Table {...tableProps} rowKey="id">
-          <Table.Column dataIndex="id" title="ID" width={100} />
-          <Table.Column dataIndex="student_name" title="Student Name" />
-          <Table.Column dataIndex="student_email" title="Student Email" />
-          <Table.Column dataIndex="instrument" title="Instrument" />
-          <Table.Column dataIndex="level" title="Level" />
-          <Table.Column dataIndex="location" title="Location" />
-          <Table.Column 
-            dataIndex="status" 
+    <div>
+      <h1 className="p-2">Active Enquiries</h1>
+      
+      {isLoading && (
+        <div style={{ textAlign: "center", padding: "50px" }}>
+          <Spin size="large" />
+        </div>
+      )}
+
+      {!isLoading && !error && (
+        <Table dataSource={enquiries} rowKey="id">
+          <Table.Column dataIndex="first_name" title="First Name" />
+          <Table.Column dataIndex="last_name" title="Last Name" />
+          <Table.Column dataIndex="email" title="Email" />
+          <Table.Column dataIndex="postcode" title="Postcode" />
+          <Table.Column
+            dataIndex="status"
             title="Status"
             render={(status) => {
               const colors = {
-                new: 'blue',
-                assigned: 'orange',
-                expired: 'red',
-                completed: 'green'
+                new: "blue",
+                assigned: "orange",
+                expired: "red",
+                completed: "green",
               };
               return <Tag color={colors[status as keyof typeof colors]}>{status}</Tag>;
             }}
@@ -62,21 +108,20 @@ export default function EnquiriesList() {
             dataIndex={["tutor_id"]}
             title="Assigned Tutor"
             render={(value) => {
-              if (tutorIsLoading) {
-                return <>Loading...</>;
-              }
-
-              const tutor = tutorData?.data?.find((item) => item.id === value);
-              return tutor?.name ?? "Unassigned";
+              return value ? `Tutor ID: ${value}` : "Unassigned";
             }}
           />
-          <Table.Column dataIndex="created_at" title="Created At" />
+          <Table.Column
+            dataIndex="created_at"
+            title="Created At"
+            render={(value) => formatUkDate(value)}
+          />
           <Table.Column
             title="Actions"
             dataIndex="actions"
             render={(_, record) => (
               <Space>
-                {record.status === 'new' && (
+                {record.status === "new" && (
                   <Button
                     type="primary"
                     size="small"
@@ -86,14 +131,27 @@ export default function EnquiriesList() {
                     Assign
                   </Button>
                 )}
-                <EditButton hideText size="small" recordItemId={record.id} />
-                <ShowButton hideText size="small" recordItemId={record.id} />
-                <DeleteButton hideText size="small" recordItemId={record.id} />
+                <Button 
+                  icon={<EditOutlined />} 
+                  size="small" 
+                  onClick={() => {/* Add edit logic */}}
+                />
+                <Button 
+                  icon={<EyeOutlined />} 
+                  size="small" 
+                  onClick={() => {/* Add view logic */}}
+                />
+                <Button 
+                  icon={<DeleteOutlined />} 
+                  size="small" 
+                  danger
+                  onClick={() => {/* Add delete logic */}}
+                />
               </Space>
             )}
           />
         </Table>
-      </List>
+      )}
 
       {selectedEnquiry && (
         <AssignTutorModal
@@ -103,6 +161,6 @@ export default function EnquiriesList() {
           onSuccess={handleAssignSuccess}
         />
       )}
-    </>
+    </div>
   );
 }
