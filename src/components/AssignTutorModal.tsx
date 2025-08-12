@@ -1,13 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Modal, Select, message, Typography, Space, Card } from "antd";
-import { useList, useCustomMutation } from "@refinedev/core";
 import { MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Enquiry } from "@/types";
+import { supabaseClient } from "@/lib/supabase";
+import { parseInstruments } from "@/utils/parseInstrumentArray";
+import { useQuery } from "@tanstack/react-query";
+import { Typography, Select, message, Modal, Button, Space, Card } from "antd";
+import { useState } from "react";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
+
+interface Tutor {
+  id: number;
+  name: string;
+  email: string;
+  phone_number: string;
+  instruments: string;
+  location: string;
+  postcode: string;
+  strikes?: number;
+}
 
 interface AssignTutorModalProps {
   enquiry: Enquiry;
@@ -15,6 +28,7 @@ interface AssignTutorModalProps {
   onCancel: () => void;
   onSuccess: () => void;
 }
+
 
 export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   enquiry,
@@ -25,22 +39,30 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   const [selectedTutor, setSelectedTutor] = useState<string>();
   const [loading, setLoading] = useState(false);
 
-  // Fetch active tutors
-  const { data: tutorsData, isLoading: tutorsLoading } = useList({
-    resource: "tutors",
-    filters: [
-      {
-        field: "active",
-        operator: "eq",
-        value: true,
-      },
-    ],
+  // Fetch tutors using React Query
+  const { data: tutorsData, isLoading: tutorsLoading } = useQuery({
+    queryKey: ["tutors"],
+    queryFn: async () => {
+      const { data, error } = await supabaseClient.from("tutors").select("*");
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
   });
 
-  // Custom mutation for assignment
-  const { mutate: assignTutor } = useCustomMutation();
+  console.log("Fetched tutors data:", tutorsData);
+  console.log("All tutors:", tutorsData);
+  console.log("Tutors loading:", tutorsLoading);
 
-  const handleAssign = async () => {
+  // Re-enable filtering with correct logic
+  const filteredTutors = tutorsData?.filter((tutor: Tutor) => {
+    const instruments = parseInstruments(tutor.instruments);
+    return instruments.includes(enquiry?.instrument);
+  }) || [];
+
+  console.log("Filtered tutors:", filteredTutors);
+  console.log("Looking for instrument:", enquiry?.instrument);  const handleAssign = async () => {
     if (!selectedTutor) {
       message.error("Please select a tutor");
       return;
@@ -49,25 +71,16 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
     setLoading(true);
     
     try {
-      // Call the assignment function
-      await assignTutor({
-        url: "",
-        method: "post",
-        values: {},
-        config: {
-          headers: {},
-        },
-        meta: {
-          // Use Supabase RPC to call our function
-          resource: "rpc/assign_tutor_to_enquiry",
-          variables: {
-            enquiry_id_param: enquiry.id,
-            tutor_id_param: selectedTutor,
-          },
-        },
-      });
+      const { error } = await supabaseClient
+        .from("booking_owners")
+        .update({ tutor_id: selectedTutor })
+        .eq("id", enquiry.id);
 
-      message.success("Tutor assigned successfully! Emails will be sent.");
+      if (error) {
+        throw error;
+      }
+
+      message.success("Tutor assigned successfully!");
       onSuccess();
       setSelectedTutor(undefined);
     } catch (error) {
@@ -77,10 +90,6 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
       setLoading(false);
     }
   };
-
-  const filteredTutors = tutorsData?.data?.filter((tutor) => 
-    tutor.instruments?.includes(enquiry?.instrument)
-  );
 
   return (
     <Modal
@@ -138,14 +147,11 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
                 ?.includes(input.toLowerCase())
             }
           >
-            {filteredTutors?.map((tutor) => (
+            {filteredTutors?.map((tutor: Tutor) => (
               <Option key={tutor.id} value={tutor.id}>
                 <Space>
                   <UserOutlined />
-                  {tutor.name} - {tutor.location}
-                  {tutor.strikes > 0 && (
-                    <Text type="warning">({tutor.strikes} strikes)</Text>
-                  )}
+                  {tutor.name} - {tutor.postcode}
                 </Space>
               </Option>
             ))}

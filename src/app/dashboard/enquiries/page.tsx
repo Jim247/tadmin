@@ -8,7 +8,6 @@ import { AssignTutorModal } from "@/components/AssignTutorModal";
 import { supabaseClient } from "@/lib/supabase";
 import { Enquiry } from "@/types";
 import formatUkDate from "@/utils/FormatUkDate";
-import { ThemedLayoutV2 } from "@refinedev/antd";
 
 
 interface Tutor {
@@ -17,44 +16,56 @@ interface Tutor {
 }
 
 export default function EnquiriesList() {
-  console.log("🔥 EnquiriesList component is rendering!");
-  console.log("🔧 Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("🔑 Supabase Key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  
   const { data: enquiries, isLoading, error } = useQuery({
     queryKey: ["enquiries"],
     queryFn: async () => {
-      console.log("🚀 Starting Supabase queries...");
-      
+      // Get booking owners with their related students
       const { data: bookingOwners, error: bookingOwnersError } = await supabaseClient
         .from("booking_owners")
-        .select("*");
-      console.log("📊 Booking owners data:", bookingOwners);
-      console.log("❌ Booking owners error:", bookingOwnersError);
+        .select(`
+          *,
+          students(*)
+        `);
 
-      const { data: students, error: studentsError } = await supabaseClient
-        .from("students")
-        .select("*");
-      console.log("👥 Students data:", students);
-      console.log("❌ Students error:", studentsError);
-
-      if (bookingOwnersError || studentsError) {
-        const errorMsg = bookingOwnersError?.message || studentsError?.message;
-        console.error("💥 Throwing error:", errorMsg);
-        throw new Error(errorMsg);
+      if (bookingOwnersError) {
+        throw new Error(bookingOwnersError.message);
       }
 
-      const combined = [...(bookingOwners || []), ...(students || [])];
-      console.log("✅ Combined enquiries:", combined);
-      return combined;
+      // Transform the data to create enquiry records
+      const enquiries = (bookingOwners || []).map(owner => {
+        // If there are students, create an enquiry for each student
+        if (owner.students && owner.students.length > 0) {
+          return owner.students.map(student => ({
+            ...owner,
+            student_id: student.id,
+            student_first_name: student.first_name,
+            student_last_name: student.last_name,
+            student_age: student.age,
+            instrument: student.instrument || student.instruments, // Handle both field names
+            level: student.level,
+            is_self_booking: false,
+            booking_type: 'parent_for_child'
+          }));
+        } else {
+          // No linked students - booking owner is the student
+          return [{
+            ...owner,
+            student_id: owner.id,
+            student_first_name: owner.first_name,
+            student_last_name: owner.last_name,
+            student_age: owner.age,
+            instrument: owner.instrument || owner.instruments, // Handle both field names
+            level: owner.level,
+            is_self_booking: true,
+            booking_type: 'self_booking'
+          }];
+        }
+      }).flat();
+
+      return enquiries;
     },
   });
 
-
-  console.log("📋 Current React Query state:");
-  console.log("  - enquiries:", enquiries);
-  console.log("  - isLoading:", isLoading);
-  console.log("  - error:", error);
 
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
@@ -66,7 +77,7 @@ export default function EnquiriesList() {
   });
 
   const fetchTutors = async () => {
-    const { data, error } = await supabaseClient.from("tutors").select("id, name");
+    const { data, error } = await supabaseClient.from("tutors").select("*");
     if (error) {
       console.error("Error fetching tutors:", error);
     } else {
@@ -155,11 +166,34 @@ export default function EnquiriesList() {
       </div>
 
       <Table dataSource={filteredEnquiries} rowKey="id">
-        <Table.Column dataIndex="first_name" title="First Name" />
-        <Table.Column dataIndex="last_name" title="Last Name" />
-        <Table.Column dataIndex="email" title="Email" />
-        <Table.Column dataIndex="postcode" title="Postcode" />
+        <Table.Column 
+          title="Booking Owner" 
+          render={(_, record) => `${record.first_name} ${record.last_name}`}
+        />
+        <Table.Column 
+          title="Student" 
+          render={(_, record) => (
+            <div>
+              <div>{record.student_first_name} {record.student_last_name}</div>
+              <small style={{ color: '#666' }}>
+                {record.is_self_booking ? '(Self)' : '(Child)'}
+              </small>
+            </div>
+          )}
+        />
+        <Table.Column dataIndex="email" title="Contact Email" />
         <Table.Column dataIndex="phone" title="Phone" />
+        <Table.Column dataIndex="postcode" title="Postcode" />
+        <Table.Column 
+          dataIndex="instrument" 
+          title="Instrument"
+          render={(instrument) => instrument || 'Not specified'}
+        />
+        <Table.Column 
+          dataIndex="level" 
+          title="Level"
+          render={(level) => level || 'Not specified'}
+        />
         <Table.Column
           dataIndex="status"
           title="Status"
