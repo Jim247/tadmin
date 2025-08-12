@@ -8,6 +8,7 @@ import { AssignTutorModal } from "@/components/AssignTutorModal";
 import { supabaseClient } from "@/lib/supabase";
 import { Enquiry } from "@/types";
 import formatUkDate from "@/utils/FormatUkDate";
+import { ThemedLayoutV2 } from "@refinedev/antd";
 
 
 interface Tutor {
@@ -97,11 +98,6 @@ export default function EnquiriesList() {
     }
   };
 
-  const handleAssign = (enquiry: Enquiry) => {
-    setSelectedEnquiry(enquiry);
-    setAssignModalVisible(true);
-  };
-
   const handleAssignSuccess = () => {
     setAssignModalVisible(false);
     setSelectedEnquiry(null);
@@ -163,7 +159,7 @@ export default function EnquiriesList() {
         <Table.Column dataIndex="last_name" title="Last Name" />
         <Table.Column dataIndex="email" title="Email" />
         <Table.Column dataIndex="postcode" title="Postcode" />
-        <Table.Column dataIndex="phone  " title="Phone" />
+        <Table.Column dataIndex="phone" title="Phone" />
         <Table.Column
           dataIndex="status"
           title="Status"

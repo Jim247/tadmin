@@ -123,7 +123,7 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
         <div>
           <Title level={5}>Select Tutor</Title>
           <Text type="secondary">
-            Showing tutors who teach {enquiry?.instrument}
+          
           </Text>
           <Select
             style={{ width: "100%", marginTop: 8 }}

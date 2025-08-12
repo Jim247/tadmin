@@ -1,22 +1,38 @@
 "use client";
 
-import { List, useTable, EditButton, ShowButton, DeleteButton, CreateButton } from "@refinedev/antd";
+import { supabaseClient } from "@/lib/supabase";
+import { List, EditButton, ShowButton, DeleteButton, CreateButton } from "@refinedev/antd";
 import { Table, Space, Tag } from "antd";
+import { useQuery } from "@tanstack/react-query";
 
 export default function TutorsList() {
-  const { tableProps } = useTable({
-    syncWithLocation: true,
+  const { data: tutors, isLoading, error } = useQuery({
+    queryKey: ["tutors"],
+    queryFn: async () => {
+      const { data, error } = await supabaseClient.from("tutors").select("*");
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
   });
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+  return <div>Error: {(error as Error).message}</div>;
+  }
 
   return (
     <List
       headerButtons={<CreateButton />}
     >
-      <Table {...tableProps} rowKey="id">
-        <Table.Column dataIndex="id" title="ID" />
+      <Table dataSource={tutors} rowKey="id" loading={isLoading}>
         <Table.Column dataIndex="name" title="Name" />
         <Table.Column dataIndex="email" title="Email" />
-        <Table.Column dataIndex="phone" title="Phone" />
+        <Table.Column dataIndex="phone_number" title="Phone" />
         <Table.Column 
           dataIndex="instruments" 
           title="Instruments"
@@ -26,25 +42,6 @@ export default function TutorsList() {
                 <Tag key={index} color="blue">{instrument}</Tag>
               ))}
             </div>
-          )}
-        />
-        <Table.Column dataIndex="location" title="Location" />
-        <Table.Column 
-          dataIndex="strikes" 
-          title="Strikes"
-          render={(strikes) => (
-            <Tag color={strikes > 0 ? "red" : "green"}>
-              {strikes || 0}
-            </Tag>
-          )}
-        />
-        <Table.Column 
-          dataIndex="active" 
-          title="Status"
-          render={(active) => (
-            <Tag color={active ? "green" : "red"}>
-              {active ? "Active" : "Inactive"}
-            </Tag>
           )}
         />
         <Table.Column dataIndex="created_at" title="Joined" />
