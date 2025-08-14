@@ -109,10 +109,19 @@ export default function EnquiriesList() {
                 <strong>Students:</strong>
                 <ul style={{ marginTop: 8 }}>
                   {record.students.map((student: Student) => (
-                    <li key={student.id} style={{ marginBottom: 8 }}>
-                      <strong>{student.name}</strong> - {Array.isArray(student.instruments) ? student.instruments.join(", ") : student.instruments}
-                      <br />Assigned Tutor: {student.tutor_id ? student.tutor_id : "Unassigned"}
-                    </li>
+ <li key={student.id} style={{ marginBottom: 8 }}>
+  <strong>{student.name}</strong> - {Array.isArray(student.instruments) ? student.instruments.join(", ") : student.instruments}
+  <div>
+    Assigned Tutor: {
+      (() => {
+        const tutorId = student.tutor_id;
+        if (!tutorId) return "Unassigned";
+        const tutor = tutors?.find(t => t.id === tutorId);
+        return tutor ? tutor.name : "Unknown Tutor";
+      })()
+    }
+  </div>
+</li>
                   ))}
                 </ul>
               </div>
