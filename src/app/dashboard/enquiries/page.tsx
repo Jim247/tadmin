@@ -8,7 +8,7 @@ import { AssignTutorModal } from "@/components/AssignTutorModal";
 import { supabaseClient } from "@/lib/supabase";
 import { Enquiry } from "@/types";
 import formatUkDate from "@/utils/FormatUkDate";
-import { aggregateOwners, getStudentCount } from "@/utils/aggregation-functions";
+import { getStudentCount } from "@/utils/aggregation-functions";
 
 
 interface Tutor {
@@ -38,13 +38,19 @@ export default function EnquiriesList() {
   const enquiries = (bookingOwners || []).map(owner => {
         // If there are students, create an enquiry for each student
         if (owner.students && owner.students.length > 0) {
+          // Aggregate all instruments from all students for this owner
+          const allStudentInstruments = owner.students
+            .map(student => Array.isArray(student.instruments) ? student.instruments : [student.instruments])
+            .flat()
+            .filter(Boolean);
           return owner.students.map(student => ({
             ...owner,
             student_id: student.id,
             student_first_name: student.first_name,
             student_last_name: student.last_name,
             student_age: student.age,
-            instrument: student.instrument || student.instruments, // Handle both field names
+            // Show all student instruments for this owner as a comma-separated string
+            instruments: allStudentInstruments.length > 0 ? allStudentInstruments.join(", ") : 'Not specified',
             level: student.level,
             is_self_booking: false,
             booking_type: 'parent_for_child'
@@ -57,14 +63,19 @@ export default function EnquiriesList() {
             student_first_name: owner.first_name,
             student_last_name: owner.last_name,
             student_age: owner.age,
-            instrument: owner.instrument || owner.instruments, // Handle both field names
+            // Show booking owner's own instruments as a comma-separated string or 'Not specified'
+            instruments: Array.isArray(owner.instruments) && owner.instruments.length > 0
+              ? owner.instruments.join(", ")
+              : owner.instruments || 'Not specified',
             level: owner.level,
             is_self_booking: true,
             booking_type: 'self_booking'
           }];
         }
       }).flat();
-      console.log(enquiries)
+    console.log('Enquiry instruments:', enquiries.map(e => ({ id: e.student_id, instruments: e.instruments })));
+    console.log(enquiries)
+      console.log(enquiries.map(e => ({ id: e.student_id, instruments: e.instruments })));
       return enquiries;
     },
   });
@@ -86,6 +97,7 @@ export default function EnquiriesList() {
     } else {
       setTutors(data || []);
     }
+    console.log('tutors ', data)
   };
 
   const handleAssignClick = (enquiry: Enquiry) => {
@@ -191,9 +203,27 @@ export default function EnquiriesList() {
         <Table.Column dataIndex="phone" title="Phone" />
         <Table.Column dataIndex="postcode" title="Postcode" />
         <Table.Column 
-          dataIndex="instrument" 
-          title="Instrument"
-          render={(instrument) => instrument || 'Not specified'}
+          dataIndex="instruments" 
+          title="Instrument(s)"
+          render={(instruments) => {
+            if (!instruments || instruments === 'Not specified') return 'Not specified';
+            // Split instruments string into array and render as chips
+            return instruments.split(',').map(instr => (
+              <Tag
+                key={instr.trim()}
+                color="blue"
+                style={{
+                  marginRight: 8,
+                  marginBottom: 6,
+                  padding: '4px 12px',
+                  fontSize: '1em',
+                  display: 'inline-block'
+                }}
+              >
+                {instr.trim()}
+              </Tag>
+            ));
+          }}
         />
         <Table.Column 
           dataIndex="level" 

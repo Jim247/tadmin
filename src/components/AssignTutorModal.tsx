@@ -55,14 +55,18 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   console.log("All tutors:", tutorsData);
   console.log("Tutors loading:", tutorsLoading);
 
-  // Re-enable filtering with correct logic
+  // Filtering tutors by matching any instrument in student's array with tutor's array
   const filteredTutors = tutorsData?.filter((tutor: Tutor) => {
-    const instruments = parseInstruments(tutor.instruments);
-    return instruments.includes(enquiry?.instrument);
+    const tutorInstruments = parseInstruments(tutor.instruments);
+    const studentInstruments = Array.isArray(enquiry.instruments)
+      ? enquiry.instruments
+      : [enquiry.instruments];
+    // Check if any instrument matches
+    return studentInstruments.some(instr => tutorInstruments.includes(instr));
   }) || [];
 
   console.log("Filtered tutors:", filteredTutors);
-  console.log("Looking for instrument:", enquiry?.instrument);  const handleAssign = async () => {
+  console.log("Looking for instrument:", enquiry?.instruments);  const handleAssign = async () => {
     if (!selectedTutor) {
       message.error("Please select a tutor");
       return;

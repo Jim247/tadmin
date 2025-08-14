@@ -33,7 +33,7 @@ export interface Enquiry {
   student_name: string;
   student_email: string;
   student_phone?: string;
-  instrument: string;
+  instruments: string;
   students: string[];
   level?: string;
   location?: string;
