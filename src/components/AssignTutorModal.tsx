@@ -57,7 +57,7 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
 
   // Filtering tutors by matching any instrument in student's array with tutor's array
   const filteredTutors = tutorsData?.filter((tutor: Tutor) => {
-    const tutorInstruments = parseInstruments(tutor.instruments);
+    const tutorInstruments = (tutor.instruments);
     const studentInstruments = Array.isArray(enquiry.instruments)
       ? enquiry.instruments
       : [enquiry.instruments];
@@ -122,9 +122,9 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
           <Title level={5}>Enquiry Details</Title>
           <Text><strong>Booking Owner:</strong> {enquiry?.first_name}{" "}{enquiry?.last_name}</Text><br />
           <Text><strong>Email:</strong> {enquiry?.email}</Text><br />
-          <Text><strong>Instrument:</strong> {enquiry?.instrument}</Text><br />
+          <Text><strong>Instrument:</strong> {enquiry?.instruments}</Text><br />
           <Text><strong>Level:</strong> {enquiry?.level}</Text><br />
-          <Text><strong>Location:</strong> {enquiry?.location}</Text><br />
+          <Text><strong>Location:</strong> {enquiry?.ward}, {enquiry.postcode}</Text><br />
           {enquiry?.message && (
             <>
               <Text><strong>Message:</strong></Text><br />

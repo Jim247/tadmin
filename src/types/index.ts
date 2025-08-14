@@ -26,6 +26,8 @@ export interface Student {
 }
 
 export interface Enquiry {
+  postcode: ReactNode;
+  ward: ReactNode;
   email: string;
   last_name: string;
   first_name: string;

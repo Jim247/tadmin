@@ -155,7 +155,6 @@ export default function EnquiriesList() {
   return (
     <div>
       <h1 className="p-2">Active Enquiries</h1>
-
       <div style={{ marginBottom: 16 }}>
         <select
           value={filters.status}
@@ -179,10 +178,28 @@ export default function EnquiriesList() {
           Clear Filters
         </Button>
       </div>
-
       <Table
         dataSource={filteredEnquiries}
         rowKey={record => record.student_id || record.id}
+        expandable={{
+          expandedRowRender: (record) => (
+            Array.isArray(record.students) && record.students.length > 0 ? (
+              <div>
+                <strong>Students:</strong>
+                <ul style={{ marginTop: 8 }}>
+                  {record.students.map(student => (
+                    <li key={student.id} style={{ marginBottom: 8 }}>
+                      <strong>{student.name}</strong> - {Array.isArray(student.instruments) ? student.instruments.join(", ") : student.instruments}
+                      <br />Assigned Tutor: {student.tutor_id ? student.tutor_id : "Unassigned"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : <span>No students linked</span>
+          ),
+          rowExpandable: (record) => Array.isArray(record.students) && record.students.length > 0,
+          expandRowByClick: true,
+        }}
       >
         <Table.Column 
           title="Booking Owner" 
@@ -207,10 +224,11 @@ export default function EnquiriesList() {
           title="Instrument(s)"
           render={(instruments) => {
             if (!instruments || instruments === 'Not specified') return 'Not specified';
-            // Split instruments string into array and render as chips
-            return instruments.split(',').map(instr => (
+            // Split instruments string into array, remove duplicates, and render as chips
+            const uniqueInstruments = Array.from(new Set((instruments as string).split(',').map((instr: string) => instr.trim())));
+            return uniqueInstruments.map((instr: string) => (
               <Tag
-                key={instr.trim()}
+                key={instr}
                 color="blue"
                 style={{
                   marginRight: 8,
@@ -220,7 +238,7 @@ export default function EnquiriesList() {
                   display: 'inline-block'
                 }}
               >
-                {instr.trim()}
+                {instr}
               </Tag>
             ));
           }}
@@ -314,7 +332,7 @@ export default function EnquiriesList() {
 
       {selectedEnquiry && (
         <AssignTutorModal
-          enquiry={selectedEnquiry}
+          enquiry={selectedEnquiry as Enquiry}
           visible={assignModalVisible}
           onCancel={() => setAssignModalVisible(false)}
           onSuccess={handleAssignSuccess}
