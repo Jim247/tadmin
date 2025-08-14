@@ -1,87 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEnquiries, useTutors } from "@/hooks/useEnquiriesAndTutors";
 import { Table, Space, Button, Tag, Spin, Modal, List, message } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import { AssignTutorModal } from "@/components/AssignTutorModal";
-import { supabaseClient } from "@/lib/supabase";
-import { Enquiry } from "@/types";
+import { Enquiry, Student } from "@/constants/types";
 import formatUkDate from "@/utils/FormatUkDate";
 import { getStudentCount } from "@/utils/aggregation-functions";
+import { supabaseClient } from "@/lib/supabase";
 
-
-interface Tutor {
-  id: number;
-  name: string;
-}
 
 export default function EnquiriesList() {
-  const { data: enquiries, isLoading, error } = useQuery({
-    queryKey: ["enquiries"],
-    queryFn: async () => {
-      // Get booking owners with their related students
-      const { data: bookingOwners, error: bookingOwnersError } = await supabaseClient
-        .from("booking_owners")
-        .select(`
-          *,
-          students(*)
-        `);
-
-      if (bookingOwnersError) {
-        throw new Error(bookingOwnersError.message);
-      }
-
-  // Debug log: print bookingOwners to inspect students array
-  console.log('bookingOwners:', bookingOwners);
-  // Transform the data to create enquiry records
-  const enquiries = (bookingOwners || []).map(owner => {
-        // If there are students, create an enquiry for each student
-        if (owner.students && owner.students.length > 0) {
-          // Aggregate all instruments from all students for this owner
-          const allStudentInstruments = owner.students
-            .map(student => Array.isArray(student.instruments) ? student.instruments : [student.instruments])
-            .flat()
-            .filter(Boolean);
-          return owner.students.map(student => ({
-            ...owner,
-            student_id: student.id,
-            student_first_name: student.first_name,
-            student_last_name: student.last_name,
-            student_age: student.age,
-            // Show all student instruments for this owner as a comma-separated string
-            instruments: allStudentInstruments.length > 0 ? allStudentInstruments.join(", ") : 'Not specified',
-            level: student.level,
-            is_self_booking: false,
-            booking_type: 'parent_for_child'
-          }));
-        } else {
-          // No linked students - booking owner is the student
-          return [{
-            ...owner,
-            student_id: owner.id,
-            student_first_name: owner.first_name,
-            student_last_name: owner.last_name,
-            student_age: owner.age,
-            // Show booking owner's own instruments as a comma-separated string or 'Not specified'
-            instruments: Array.isArray(owner.instruments) && owner.instruments.length > 0
-              ? owner.instruments.join(", ")
-              : owner.instruments || 'Not specified',
-            level: owner.level,
-            is_self_booking: true,
-            booking_type: 'self_booking'
-          }];
-        }
-      }).flat();
-    console.log('Enquiry instruments:', enquiries.map(e => ({ id: e.student_id, instruments: e.instruments })));
-    console.log(enquiries)
-      console.log(enquiries.map(e => ({ id: e.student_id, instruments: e.instruments })));
-      return enquiries;
-    },
-  });
+  const { data: enquiries, isLoading, error } = useEnquiries();
+  const { data: tutors } = useTutors();
 
 
-  const [tutors, setTutors] = useState<Tutor[]>([]);
+  // Remove tutors state and fetchTutors logic, use tutors from hook
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
 
@@ -90,23 +25,14 @@ export default function EnquiriesList() {
     assigned: "all", // "assigned", "unassigned", or "all"
   });
 
-  const fetchTutors = async () => {
-    const { data, error } = await supabaseClient.from("tutors").select("*");
-    if (error) {
-      console.error("Error fetching tutors:", error);
-    } else {
-      setTutors(data || []);
-    }
-    console.log('tutors ', data)
-  };
+
 
   const handleAssignClick = (enquiry: Enquiry) => {
     setSelectedEnquiry(enquiry);
     setAssignModalVisible(true);
-    fetchTutors();
   };
 
-  const handleTutorSelect = async (tutorId: number) => {
+  const handleTutorSelect = async (tutorId: string) => {
     if (!selectedEnquiry) return;
 
     const { error } = await supabaseClient
@@ -187,7 +113,7 @@ export default function EnquiriesList() {
               <div>
                 <strong>Students:</strong>
                 <ul style={{ marginTop: 8 }}>
-                  {record.students.map(student => (
+                  {record.students.map((student: Student) => (
                     <li key={student.id} style={{ marginBottom: 8 }}>
                       <strong>{student.name}</strong> - {Array.isArray(student.instruments) ? student.instruments.join(", ") : student.instruments}
                       <br />Assigned Tutor: {student.tutor_id ? student.tutor_id : "Unassigned"}
@@ -205,17 +131,7 @@ export default function EnquiriesList() {
           title="Booking Owner" 
           render={(_, record) => `${record.first_name} ${record.last_name}`}
         />
-        <Table.Column 
-          title="Student" 
-          render={(_, record) => (
-            <div>
-              <div>{record.student_first_name} {record.student_last_name}</div>
-              <small style={{ color: '#666' }}>
-                {record.is_self_booking ? '(Self)' : '(Child)'}
-              </small>
-            </div>
-          )}
-        />
+  
         <Table.Column dataIndex="email" title="Contact Email" />
         <Table.Column dataIndex="phone" title="Phone" />
         <Table.Column dataIndex="postcode" title="Postcode" />
@@ -223,7 +139,7 @@ export default function EnquiriesList() {
           dataIndex="instruments" 
           title="Instrument(s)"
           render={(instruments) => {
-            if (!instruments || instruments === 'Not specified') return 'Not specified';
+            if (!instruments || instruments === 'Not specified') return 'Booking Owner';
             // Split instruments string into array, remove duplicates, and render as chips
             const uniqueInstruments = Array.from(new Set((instruments as string).split(',').map((instr: string) => instr.trim())));
             return uniqueInstruments.map((instr: string) => (

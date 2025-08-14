@@ -43,16 +43,6 @@ export const ALL_INSTRUMENTS: Instrument[] = Object.values(INSTRUMENTS).flat();
 // Helper to get all categories
 export const INSTRUMENT_CATEGORIES: InstrumentCategory[] = Object.keys(INSTRUMENTS) as InstrumentCategory[];
 
-// Skill levels
-export const SKILL_LEVELS = [
-  'Beginner',
-  'Elementary', 
-  'Intermediate',
-  'Advanced',
-  'Professional'
-] as const;
-
-export type SkillLevel = typeof SKILL_LEVELS[number];
 
 // Permission checks
 export const PERMISSIONS = {

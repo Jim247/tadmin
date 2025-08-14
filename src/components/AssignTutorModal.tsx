@@ -1,26 +1,16 @@
 "use client";
 
 import { MailOutlined, UserOutlined } from "@ant-design/icons";
-import { Enquiry } from "@/types";
 import { supabaseClient } from "@/lib/supabase";
-import { parseInstruments } from "@/utils/parseInstrumentArray";
 import { useQuery } from "@tanstack/react-query";
 import { Typography, Select, message, Modal, Button, Space, Card } from "antd";
 import { useState } from "react";
+import { Enquiry, Tutor, Student } from "@/constants/types";
+
 
 const { Text, Title } = Typography;
 const { Option } = Select;
 
-interface Tutor {
-  id: number;
-  name: string;
-  email: string;
-  phone_number: string;
-  instruments: string;
-  location: string;
-  postcode: string;
-  strikes?: number;
-}
 
 interface AssignTutorModalProps {
   enquiry: Enquiry;
@@ -29,14 +19,13 @@ interface AssignTutorModalProps {
   onSuccess: () => void;
 }
 
-
 export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   enquiry,
   visible,
   onCancel,
   onSuccess,
 }) => {
-  const [selectedTutor, setSelectedTutor] = useState<string>();
+  const [selectedTutors, setSelectedTutors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   // Fetch tutors using React Query
@@ -51,9 +40,18 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
     },
   });
 
-  console.log("Fetched tutors data:", tutorsData);
-  console.log("All tutors:", tutorsData);
-  console.log("Tutors loading:", tutorsLoading);
+  // Helper to parse instruments (handles string or array)
+  const toArray = (val: string | string[]) =>
+    Array.isArray(val) ? val : typeof val === "string" ? val.split(",").map(s => s.trim()) : [];
+
+  // For each student, get tutors who match at least one instrument
+  const getAllocatableTutors = (student: Student) => {
+    const studentInstruments = toArray(student.instruments);
+    return tutorsData?.filter((tutor: Tutor) => {
+      const tutorInstruments = toArray(tutor.instruments);
+      return studentInstruments.some(instr => tutorInstruments.includes(instr));
+    }) || [];
+  };
 
   // Filtering tutors by matching any instrument in student's array with tutor's array
   const filteredTutors = tutorsData?.filter((tutor: Tutor) => {
@@ -65,31 +63,32 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
     return studentInstruments.some(instr => tutorInstruments.includes(instr));
   }) || [];
 
-  console.log("Filtered tutors:", filteredTutors);
-  console.log("Looking for instrument:", enquiry?.instruments);  const handleAssign = async () => {
-    if (!selectedTutor) {
-      message.error("Please select a tutor");
-      return;
-    }
-
+const handleAssign = async () => {
     setLoading(true);
-    
     try {
-      const { error } = await supabaseClient
-        .from("booking_owners")
-        .update({ tutor_id: selectedTutor })
-        .eq("id", enquiry.id);
-
-      if (error) {
-        throw error;
-      }
-
-      message.success("Tutor assigned successfully!");
+      await Promise.all(
+        enquiry.students.map(async ( student: Student) => {
+          const tutorId = selectedTutors[student.id];
+          // Placeholder: assign status based on tutor selection
+          const status = tutorId ? "assigned" : "waiting";
+          // Replace this with your actual Supabase update or API call
+          console.log(`Student ${student.name} (${student.id}) assigned status: ${status}, tutor: ${tutorId || "none"}`);
+          // Supabase update:
+          await supabaseClient
+            .from("students")
+            .update({ tutor_id: tutorId || null, status,
+                assigned: true
+             }
+            )
+            .eq("id", student.id);
+        })
+      );
+      message.success("Statuses updated!");
       onSuccess();
-      setSelectedTutor(undefined);
+      setSelectedTutors({});
     } catch (error) {
       console.error("Assignment error:", error);
-      message.error("Failed to assign tutor");
+      message.error("Failed to assign tutors");
     } finally {
       setLoading(false);
     }
@@ -110,7 +109,7 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
           icon={<MailOutlined />}
           loading={loading}
           onClick={handleAssign}
-          disabled={!selectedTutor}
+          disabled={Object.keys(selectedTutors).length === 0}
         >
           Assign & Send Emails
         </Button>,
@@ -132,37 +131,63 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
             </>
           )}
         </Card>
+               <Card size="small">
+          <Title level={5}>Students</Title>
+          <Text><strong>{Array.isArray(enquiry.students) && enquiry.students.length > 0 ? (
+  <ul>
+    {enquiry.students?.map((student: Student) => (
+      <li key={student.id} style={{ marginBottom: 16 }}>
+        <strong>{student.name}</strong>
+        {student.instruments && (
+          <> — {toArray(student.instruments).join(", ")}</>
+        )}
+        <br />
+        <Select
+          style={{ width: 220, marginTop: 8 }}
+          placeholder={getAllocatableTutors(student).length === 0 ? "No tutor available" : "Assign tutor"}
+          loading={tutorsLoading}
+          value={selectedTutors[student.id]}
+          onChange={value => setSelectedTutors(prev => ({ ...prev, [student.id]: value }))}
+          disabled={getAllocatableTutors(student).length === 0}
+        >
+          {getAllocatableTutors(student).map((tutor: Tutor) => (
+            <Option key={tutor.id} value={tutor.id}>
+              <Space>
+                <UserOutlined />
+                {tutor.name} - {tutor.postcode}
+              </Space>
+            </Option>
+          ))}
+        </Select>
+        {getAllocatableTutors(student).length === 0 && (
+          <>
+            <Text type="warning" style={{ marginLeft: 8 }}>
+            </Text>
+            <Text>No tutor, Set to &quot;waiting&ldquo;</Text>
+          </>
+        )}
+      </li>
+    ))}
+  </ul>
+) : (
+  <Text type="secondary">No students linked to this enquiry.</Text>
+)}</strong></Text>
 
+          {enquiry?.message && (
+            <>
+              <Text><strong>Message:</strong></Text><br />
+              <Text>{enquiry.message}</Text>
+            </>
+          )}
+        </Card>
         <div>
           <Title level={5}>Select Tutor</Title>
           <Text type="secondary">
           
           </Text>
-          <Select
-            style={{ width: "100%", marginTop: 8 }}
-            placeholder="Select a tutor"
-            loading={tutorsLoading}
-            value={selectedTutor}
-            onChange={setSelectedTutor}
-            showSearch
-            filterOption={(input, option) =>
-              (option?.children as unknown as string)
-                ?.toLowerCase()
-                ?.includes(input.toLowerCase())
-            }
-          >
-            {filteredTutors?.map((tutor: Tutor) => (
-              <Option key={tutor.id} value={tutor.id}>
-                <Space>
-                  <UserOutlined />
-                  {tutor.name} - {tutor.postcode}
-                </Space>
-              </Option>
-            ))}
-          </Select>
           {filteredTutors?.length === 0 && !tutorsLoading && (
             <Text type="warning">
-              No active tutors found for {enquiry?.instrument}
+              No active tutors found for {enquiry?.instruments}
             </Text>
           )}
         </div>

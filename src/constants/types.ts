@@ -1,4 +1,4 @@
-import { UserRole, EnquiryStatus, MessageSenderType, Instrument, SkillLevel } from './userTypes';
+import { UserRole, EnquiryStatus, MessageSenderType, Instrument } from './userTypes';
 
 // Database table interfaces based on your Supabase schema
 
@@ -16,7 +16,7 @@ export interface Tutor {
   id: string;
   user_id: string;
   instruments: Instrument[];
-  skill_level: SkillLevel;
+  skill_level: string;
   bio?: string;
   hourly_rate?: number;
   available: boolean;
@@ -35,7 +35,9 @@ export interface BookingOwner {
   last_name: string;
   email: string;
   phone: string;
-  instrument: string;
+  age: number;
+  level: string;
+  instruments: string[];
   skill_level: string;
   message: string;
   location?: string;
@@ -48,14 +50,17 @@ export interface BookingOwner {
   
   // Joined fields
   assigned_tutor?: Tutor;
-  student?: Student;
+  students: Student[];
 }
 
 export interface Student {
+  name: string;
+  level: string;
   id: string;
   booking_owner_id: string;
   first_name: string;
   last_name: string;
+  instruments: string[]
   age?: number;
   notes?: string;
   created_at: string;
@@ -65,6 +70,28 @@ export interface Student {
   booking_owner?: BookingOwner;
 }
 
+export interface Enquiry {
+  postcode: string;
+  ward: string;
+  email: string;
+  last_name: string;
+  first_name: string;
+  id: string;
+  student_name: string;
+  student_email: string;
+  student_phone?: string;
+  instruments: string;
+  students: string[];
+  level?: string;
+  location?: string;
+  message?: string;
+  status: 'new' | 'assigned' | 'expired' | 'completed';
+  tutor_id?: string;
+  assigned_at?: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
 export interface Message {
   id: string;
   enquiry_id: string;
@@ -78,6 +105,7 @@ export interface Message {
   enquiry?: BookingOwner;
   sender?: User | Student;
 }
+
 
 // API Response types for Refine data provider
 export interface ApiResponse<T> {
@@ -109,7 +137,7 @@ export interface UpdateUserForm {
 export interface CreateTutorForm {
   user_id: string;
   instruments: Instrument[];
-  skill_level: SkillLevel;
+  skill_level: string ;
   bio?: string;
   hourly_rate?: number;
   location?: string;
@@ -118,7 +146,7 @@ export interface CreateTutorForm {
 
 export interface UpdateTutorForm {
   instruments?: Instrument[];
-  skill_level?: SkillLevel;
+  skill_level?: string ;
   bio?: string;
   hourly_rate?: number;
   available?: boolean;
@@ -152,7 +180,7 @@ export interface CreateMessageForm {
 export interface EnquiryFilters {
   status?: EnquiryStatus;
   instrument?: Instrument;
-  skill_level?: SkillLevel;
+  skill_level?: string ;
   assigned_tutor_id?: string;
   created_after?: string;
   created_before?: string;
@@ -160,7 +188,7 @@ export interface EnquiryFilters {
 
 export interface TutorFilters {
   instruments?: Instrument[];
-  skill_level?: SkillLevel;
+  skill_level?: string ;
   available?: boolean;
   location?: string;
   min_rate?: number;
