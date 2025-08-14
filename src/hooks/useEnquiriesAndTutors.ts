@@ -23,6 +23,7 @@ export function useEnquiries() {
             student_id: student.id,
             student_name: student.name,
             student_age: student.age,
+            tutor_id: student.tutor_id,
             instruments: allStudentInstruments.length > 0 ? allStudentInstruments.join(", ") : 'Not specified',
             level: student.level,
             is_self_booking: false,
@@ -39,6 +40,7 @@ export function useEnquiries() {
               ? owner.instruments.join(", ")
               : owner.instruments || 'Not specified',
             level: owner.level,
+            tutor_id: owner.assigned_tutor,
             is_self_booking: true,
             booking_type: 'self_booking',
             students: [] // empty students array for compatibility

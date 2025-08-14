@@ -12,7 +12,7 @@ import { supabaseClient } from "@/lib/supabase";
 
 
 export default function EnquiriesList() {
-  const { data: enquiries, isLoading, error } = useEnquiries();
+  const { data: enquiries, isLoading, error, refetch } = useEnquiries();
   const { data: tutors } = useTutors();
 
 
@@ -48,11 +48,6 @@ export default function EnquiriesList() {
       setSelectedEnquiry(null);
       // Optionally refetch enquiries
     }
-  };
-
-  const handleAssignSuccess = () => {
-    setAssignModalVisible(false);
-    setSelectedEnquiry(null);
   };
 
   if (isLoading) {
@@ -180,8 +175,10 @@ export default function EnquiriesList() {
         <Table.Column
           dataIndex={"tutor_id"}
           title="Assigned Tutor"
-          render={(value) => {
-            return value ? `Tutor ID: ${value}` : "Unassigned";
+          render={(tutorId) => {
+            if (!tutorId) return "Unassigned";
+            const tutor = tutors?.find(t => t.id === tutorId);
+            return tutor ? tutor.name : "Unknown Tutor";
           }}
         />
         <Table.Column
@@ -251,7 +248,10 @@ export default function EnquiriesList() {
           enquiry={selectedEnquiry as Enquiry}
           visible={assignModalVisible}
           onCancel={() => setAssignModalVisible(false)}
-          onSuccess={handleAssignSuccess}
+          onSuccess={() => {
+            refetch(); // <-- This will re-fetch and re-render the dashboard
+            setAssignModalVisible(false);
+          }}
         />
       )}
     </div>

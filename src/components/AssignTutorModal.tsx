@@ -64,35 +64,35 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   }) || [];
 
 const handleAssign = async () => {
-    setLoading(true);
-    try {
-      await Promise.all(
-        enquiry.students.map(async ( student: Student) => {
-          const tutorId = selectedTutors[student.id];
-          // Placeholder: assign status based on tutor selection
-          const status = tutorId ? "assigned" : "waiting";
-          // Replace this with your actual Supabase update or API call
-          console.log(`Student ${student.name} (${student.id}) assigned status: ${status}, tutor: ${tutorId || "none"}`);
-          // Supabase update:
-          await supabaseClient
+  setLoading(true);
+  try {
+    await Promise.all(
+      enquiry.students.map(async (student) => {
+        const tutorId = selectedTutors[student.id];
+        // Log which student and tutor are being processed
+        console.log("Assigning tutor:", { studentId: student.id, studentName: student.name, tutorId });
+
+        if (tutorId) {
+          const { data, error } = await supabaseClient
             .from("students")
-            .update({ tutor_id: tutorId || null, status,
-                assigned: true
-             }
-            )
+            .update({ tutor_id: tutorId, is_tutor_assigned: true })
             .eq("id", student.id);
-        })
-      );
-      message.success("Statuses updated!");
-      onSuccess();
-      setSelectedTutors({});
-    } catch (error) {
-      console.error("Assignment error:", error);
-      message.error("Failed to assign tutors");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+          // Log the result of the update
+          console.log("Supabase update result:", { studentId: student.id, data, error });
+        } 
+      })
+    );
+    message.success("Statuses updated!");
+    onSuccess(); // This triggers the refetch in the parent
+    setSelectedTutors({});
+  } catch (error) {
+    console.error("Assignment error:", error);
+    message.error("Failed to assign tutors");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Modal
@@ -135,7 +135,7 @@ const handleAssign = async () => {
           <Title level={5}>Students</Title>
           <Text><strong>{Array.isArray(enquiry.students) && enquiry.students.length > 0 ? (
   <ul>
-    {enquiry.students?.map((student: Student) => (
+    {enquiry.students?.map((student) => (
       <li key={student.id} style={{ marginBottom: 16 }}>
         <strong>{student.name}</strong>
         {student.instruments && (

@@ -13,6 +13,8 @@ export interface User {
 }
 
 export interface Tutor {
+  postcode: string;
+  name: string
   id: string;
   user_id: string;
   instruments: Instrument[];
@@ -65,7 +67,7 @@ export interface Student {
   notes?: string;
   created_at: string;
   updated_at: string;
-  
+  tutor_id: string
   // Joined fields
   booking_owner?: BookingOwner;
 }
@@ -81,7 +83,7 @@ export interface Enquiry {
   student_email: string;
   student_phone?: string;
   instruments: string;
-  students: string[];
+  students: Student[];
   level?: string;
   location?: string;
   message?: string;
