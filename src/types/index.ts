@@ -34,6 +34,7 @@ export interface Enquiry {
   student_email: string;
   student_phone?: string;
   instrument: string;
+  students: string[];
   level?: string;
   location?: string;
   message?: string;

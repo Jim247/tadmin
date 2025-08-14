@@ -8,6 +8,7 @@ import { AssignTutorModal } from "@/components/AssignTutorModal";
 import { supabaseClient } from "@/lib/supabase";
 import { Enquiry } from "@/types";
 import formatUkDate from "@/utils/FormatUkDate";
+import { aggregateOwners, getStudentCount } from "@/utils/aggregation-functions";
 
 
 interface Tutor {
@@ -31,8 +32,10 @@ export default function EnquiriesList() {
         throw new Error(bookingOwnersError.message);
       }
 
-      // Transform the data to create enquiry records
-      const enquiries = (bookingOwners || []).map(owner => {
+  // Debug log: print bookingOwners to inspect students array
+  console.log('bookingOwners:', bookingOwners);
+  // Transform the data to create enquiry records
+  const enquiries = (bookingOwners || []).map(owner => {
         // If there are students, create an enquiry for each student
         if (owner.students && owner.students.length > 0) {
           return owner.students.map(student => ({
@@ -61,7 +64,7 @@ export default function EnquiriesList() {
           }];
         }
       }).flat();
-
+      console.log(enquiries)
       return enquiries;
     },
   });
@@ -165,7 +168,10 @@ export default function EnquiriesList() {
         </Button>
       </div>
 
-      <Table dataSource={filteredEnquiries} rowKey="id">
+      <Table
+        dataSource={filteredEnquiries}
+        rowKey={record => record.student_id || record.id}
+      >
         <Table.Column 
           title="Booking Owner" 
           render={(_, record) => `${record.first_name} ${record.last_name}`}
@@ -219,6 +225,10 @@ export default function EnquiriesList() {
           title="Created At"
           render={(value) => formatUkDate(value)}
         />
+      <Table.Column
+        title="Number of Students"
+        render={(_, record) => getStudentCount(record)}
+      />
         <Table.Column
           title="Actions"
           dataIndex="actions"
