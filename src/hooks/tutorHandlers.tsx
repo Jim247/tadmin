@@ -1,8 +1,9 @@
 import { Enquiry } from "@/constants/types";
 import { supabaseClient } from "@/lib/supabase";
+import { message as antdMessage } from "antd";
 
 // tutorHandlers.ts
-export async function handleAssignTutor({
+export async function handleUpdateTutorAssignment({
   selectedTutors,
   setSelectedTutors,
   enquiry,
@@ -16,7 +17,7 @@ export async function handleAssignTutor({
   enquiry: Enquiry;
   setLoading: (loading: boolean) => void;
   onSuccess: () => void;
-  message: any;
+  message: typeof antdMessage;
 }) {
   setLoading(true);
   try {
@@ -34,7 +35,12 @@ export async function handleAssignTutor({
 
           // Log the result of the update
           console.log("Supabase update result:", { studentId: student.id, data, error });
-        } 
+        } else {
+          await supabaseClient
+            .from("students")
+            .update({ tutor_id: null, is_tutor_assigned: false })
+            .eq("id", student.id);
+        }
       })
     );
     message.success("Statuses updated!");
@@ -47,3 +53,4 @@ export async function handleAssignTutor({
     setLoading(false);
   }
 }
+

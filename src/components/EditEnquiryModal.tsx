@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Modal, Button, message, Select, Space, Typography, Card } from "antd";
+import { Modal, Button, message as antdMessage, Select, Space, Typography, Card } from "antd";
 import { MailOutlined, UserOutlined } from "@ant-design/icons";
 import { filterTutors } from "@/utils/get-allocatable-tutors";
 import type { Enquiry, Student, Tutor } from "@/constants/types";
 import { FetchTutors } from "@/hooks/fetchFunctions";
+import { handleUpdateTutorAssignment } from "@/hooks/tutorHandlers";
+import { message } from "antd";
 
 const { Text, Title } = Typography;
 
@@ -23,37 +25,35 @@ export const EditEnquiryModal: React.FC<EditTutorModalProps> = ({
   onSuccess,
 }) => {
   const [selectedTutors, setSelectedTutors] = useState<Record<string, string>>({});
+  // Initialize selectedTutors from enquiry when modal opens
+  React.useEffect(() => {
+    if (visible && enquiry) {
+      const initial: Record<string, string> = {};
+      enquiry.students.forEach(student => {
+        if (student.tutor_id) initial[student.id] = student.tutor_id;
+      });
+      setSelectedTutors(initial);
+    }
+  }, [visible, enquiry]);
   const [loading, setLoading] = useState(false);
 
     // Fetch tutors using React Query
     const { data: tutorsData, isLoading: tutorsLoading } = FetchTutors()
 
-  // Placeholder update function
-  const handleUpdateTutor = (studentId: string, tutorId: string | null) => {
-    // TODO: Implement update logic in handlers
-    message.info(`Update tutor for student ${studentId} to ${tutorId}`);
-  };
-
-  // Placeholder delete function
-  const handleDeleteTutor = (studentId: string) => {
-    // TODO: Implement delete logic in handlers
-    message.info(`Remove tutor for student ${studentId}`);
-  };
-
   // Assignment logic copied from AssignTutorModal
   const handleAssign = async () => {
     setLoading(true);
     try {
-      await Promise.all(
-        enquiry.students.map(async (student) => {
-          const tutorId = selectedTutors[student.id];
-          // Placeholder: replace with your update handler
-          handleUpdateTutor(student.id, tutorId ?? null);
-        })
-      );
+      await handleUpdateTutorAssignment({
+        selectedTutors,
+        setSelectedTutors,
+        enquiry,
+        setLoading,
+        onSuccess,
+        message,
+      });
       message.success("Tutor assignments updated!");
       onSuccess();
-      setSelectedTutors({});
     } catch {
       message.error("Failed to update tutor assignments");
     } finally {
@@ -102,7 +102,7 @@ export const EditEnquiryModal: React.FC<EditTutorModalProps> = ({
                     <Select
                       style={{ width: 220, marginTop: 8 }}
                       placeholder={allocatableTutors.length === 0 ? "No tutor available" : "Assign tutor"}
-                      value={selectedTutors[student.id]}
+                      value={selectedTutors[student.id] ?? student.tutor_id ?? undefined}
                       onChange={value => setSelectedTutors(prev => ({ ...prev, [student.id]: value }))}
                       loading={tutorsLoading}
                       disabled={allocatableTutors.length === 0}
@@ -121,8 +121,15 @@ export const EditEnquiryModal: React.FC<EditTutorModalProps> = ({
                       style={{ marginLeft: 8 }}
                       danger
                       size="small"
-                      onClick={() => handleDeleteTutor(student.id)}
-                      disabled={!student.tutor_id}
+                      onClick={() => {
+                        setSelectedTutors(prev => {
+                          const updated = { ...prev };
+                          updated[student.id] = "";
+                          return updated;
+                        });
+                        antdMessage.info(`Tutor removed for ${student.name}. Changes will be saved when you update assignments.`);
+                      }}
+                      disabled={(!selectedTutors[student.id] && !student.tutor_id)}
                     >
                       Remove Tutor
                     </Button>

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Enquiry } from "@/constants/types";
 import { FetchTutors } from "@/hooks/fetchFunctions";
 import { filterTutors } from "@/utils/get-allocatable-tutors"
-import { handleAssignTutor } from "@/hooks/tutorHandlers";
+import { handleUpdateTutorAssignment } from "@/hooks/tutorHandlers";
 
 
 const { Text, Title } = Typography;
@@ -47,7 +47,7 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
           type="primary"
           icon={<MailOutlined />}
           loading={loading}
-          onClick={() => handleAssignTutor
+          onClick={() => handleUpdateTutorAssignment
             ({     selectedTutors,
               setSelectedTutors,
       enquiry,
