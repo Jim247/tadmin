@@ -9,6 +9,7 @@ import { Enquiry, Student } from "@/constants/types";
 import formatUkDate from "@/utils/format-uk-date";
 import { getStudentCount } from "@/utils/aggregation-functions";
 import { supabaseClient } from "@/lib/supabase";
+import { EditEnquiryModal } from "@/components/EditEnquiryModal";
 
 
 export default function EnquiriesList() {
@@ -19,6 +20,9 @@ export default function EnquiriesList() {
   // Remove tutors state and fetchTutors logic, use tutors from hook
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
+
+  // Add state for edit modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const [filters, setFilters] = useState({
     status: "all", // "active", "inactive", or "all"
@@ -48,6 +52,12 @@ export default function EnquiriesList() {
       setSelectedEnquiry(null);
       // Optionally refetch enquiries
     }
+  };
+
+  // Edit button handler
+  const handleEditClick = (enquiry: Enquiry) => {
+    setSelectedEnquiry(enquiry);
+    setEditModalVisible(true);
   };
 
   if (isLoading) {
@@ -216,7 +226,7 @@ export default function EnquiriesList() {
               <Button 
                 icon={<EditOutlined />} 
                 size="small" 
-                onClick={() => {/* Add edit logic */}}
+                onClick={() => handleEditClick(record as Enquiry)}
               />
               <Button 
                 icon={<EyeOutlined />} 
@@ -263,6 +273,15 @@ export default function EnquiriesList() {
           }}
         />
       )}
+      <EditEnquiryModal
+       enquiry={selectedEnquiry as Enquiry}
+          visible={editModalVisible}
+          onCancel={() => setEditModalVisible(false)}
+          onSuccess={() => {
+            refetch(); // <-- This will re-fetch and re-render the dashboard
+            setEditModalVisible(false);
+          }}
+        />
     </div>
   );
 }

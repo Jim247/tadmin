@@ -2,12 +2,12 @@
 
 import { MailOutlined
  } from "@ant-design/icons";
-import { supabaseClient } from "@/lib/supabase"
 import { Typography, Select, message, Modal, Button, Space, Card } from "antd";
 import { useState } from "react";
 import { Enquiry } from "@/constants/types";
 import { FetchTutors } from "@/hooks/fetchFunctions";
 import { filterTutors } from "@/utils/get-allocatable-tutors"
+import { handleAssignTutor } from "@/hooks/tutorHandlers";
 
 
 const { Text, Title } = Typography;
@@ -33,37 +33,6 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   // Fetch tutors using React Query
   const { data: tutorsData, isLoading: tutorsLoading } = FetchTutors()
 
-const handleAssign = async () => {
-  setLoading(true);
-  try {
-    await Promise.all(
-      enquiry.students.map(async (student) => {
-        const tutorId = selectedTutors[student.id];
-        // Log which student and tutor are being processed
-        console.log("Assigning tutor:", { studentId: student.id, studentName: student.name, tutorId });
-
-        if (tutorId) {
-          const { data, error } = await supabaseClient
-            .from("students")
-            .update({ tutor_id: tutorId, is_tutor_assigned: true })
-            .eq("id", student.id);
-
-          // Log the result of the update
-          console.log("Supabase update result:", { studentId: student.id, data, error });
-        } 
-      })
-    );
-    message.success("Statuses updated!");
-    onSuccess(); // This triggers the refetch in the parent
-    setSelectedTutors({});
-  } catch (error) {
-    console.error("Assignment error:", error);
-    message.error("Failed to assign tutors");
-  } finally {
-    setLoading(false);
-  }
-};
-
   return (
     <Modal
       title="Assign Tutor to Enquiry"
@@ -78,7 +47,15 @@ const handleAssign = async () => {
           type="primary"
           icon={<MailOutlined />}
           loading={loading}
-          onClick={handleAssign}
+          onClick={() => handleAssignTutor
+            ({     selectedTutors,
+              setSelectedTutors,
+      enquiry,
+      setLoading,
+      onSuccess,
+      message,
+            })
+          }
           disabled={Object.keys(selectedTutors).length === 0}
         >
           Assign & Send Emails
