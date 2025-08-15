@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { FetchEnquiries, FetchTutors } from "@/hooks/fetchFunctions";
-import { Table, Space, Button, Tag, Spin, Modal, List, message } from "antd";
+import { Table, Space, Button, Tag, Spin, Modal, List } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import { AssignTutorModal } from "@/components/AssignTutorModal";
 import { Enquiry, Student } from "@/constants/types";
 import formatUkDate from "@/utils/format-uk-date";
 import { getStudentCount } from "@/utils/aggregation-functions";
-import { supabaseClient } from "@/lib/supabase";
+
 import { EditEnquiryModal } from "@/components/EditEnquiryModal";
+import { handleUpdateTutorAssignment } from "@/hooks/tutorHandlers";
 
 
 export default function EnquiriesList() {
@@ -34,24 +35,6 @@ export default function EnquiriesList() {
   const handleAssignClick = (enquiry: Enquiry) => {
     setSelectedEnquiry(enquiry);
     setAssignModalVisible(true);
-  };
-
-  const handleTutorSelect = async (tutorId: string) => {
-    if (!selectedEnquiry) return;
-
-    const { error } = await supabaseClient
-      .from("booking_owners")
-      .update({ tutor_id: tutorId })
-      .eq("id", selectedEnquiry.id);
-
-    if (error) {
-      console.error("Error assigning tutor:", error);
-    } else {
-      message.success("Tutor assigned successfully!");
-      setAssignModalVisible(false);
-      setSelectedEnquiry(null);
-      // Optionally refetch enquiries
-    }
   };
 
   // Edit button handler
@@ -254,7 +237,7 @@ export default function EnquiriesList() {
           dataSource={tutors}
           renderItem={(tutor) => (
             <List.Item>
-              <Button type="link" onClick={() => handleTutorSelect(tutor.id)}>
+              <Button type="link" onClick={() => handleUpdateTutorAssignment(tutor.id)}>
                 {tutor.name}
               </Button>
             </List.Item>
