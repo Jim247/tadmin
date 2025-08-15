@@ -1,15 +1,17 @@
 "use client";
 
-import { MailOutlined, UserOutlined } from "@ant-design/icons";
-import { supabaseClient } from "@/lib/supabase";
-import { useQuery } from "@tanstack/react-query";
+import { MailOutlined
+ } from "@ant-design/icons";
+import { supabaseClient } from "@/lib/supabase"
 import { Typography, Select, message, Modal, Button, Space, Card } from "antd";
 import { useState } from "react";
-import { Enquiry, Tutor, Student } from "@/constants/types";
+import { Enquiry } from "@/constants/types";
+import { FetchTutors } from "@/hooks/fetchFunctions";
+import { filterTutors } from "@/utils/get-allocatable-tutors"
 
 
 const { Text, Title } = Typography;
-const { Option } = Select;
+
 
 
 interface AssignTutorModalProps {
@@ -29,39 +31,7 @@ export const AssignTutorModal: React.FC<AssignTutorModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   // Fetch tutors using React Query
-  const { data: tutorsData, isLoading: tutorsLoading } = useQuery({
-    queryKey: ["tutors"],
-    queryFn: async () => {
-      const { data, error } = await supabaseClient.from("tutors").select("*");
-      if (error) {
-        throw new Error(error.message);
-      }
-      return data;
-    },
-  });
-
-  // Helper to parse instruments (handles string or array)
-  const toArray = (val: string | string[]) =>
-    Array.isArray(val) ? val : typeof val === "string" ? val.split(",").map(s => s.trim()) : [];
-
-  // For each student, get tutors who match at least one instrument
-  const getAllocatableTutors = (student: Student) => {
-    const studentInstruments = toArray(student.instruments);
-    return tutorsData?.filter((tutor: Tutor) => {
-      const tutorInstruments = toArray(tutor.instruments);
-      return studentInstruments.some(instr => tutorInstruments.includes(instr));
-    }) || [];
-  };
-
-  // Filtering tutors by matching any instrument in student's array with tutor's array
-  const filteredTutors = tutorsData?.filter((tutor: Tutor) => {
-    const tutorInstruments = (tutor.instruments);
-    const studentInstruments = Array.isArray(enquiry.instruments)
-      ? enquiry.instruments
-      : [enquiry.instruments];
-    // Check if any instrument matches
-    return studentInstruments.some(instr => tutorInstruments.includes(instr));
-  }) || [];
+  const { data: tutorsData, isLoading: tutorsLoading } = FetchTutors()
 
 const handleAssign = async () => {
   setLoading(true);
@@ -133,51 +103,37 @@ const handleAssign = async () => {
         </Card>
                <Card size="small">
           <Title level={5}>Students</Title>
-          <Text><strong>{Array.isArray(enquiry.students) && enquiry.students.length > 0 ? (
-  <ul>
-    {enquiry.students?.map((student) => (
-      <li key={student.id} style={{ marginBottom: 16 }}>
-        <strong>{student.name}</strong>
-        {student.instruments && (
-          <> — {toArray(student.instruments).join(", ")}</>
-        )}
-        <br />
-        <Select
-          style={{ width: 220, marginTop: 8 }}
-          placeholder={getAllocatableTutors(student).length === 0 ? "No tutor available" : "Assign tutor"}
-          loading={tutorsLoading}
-          value={selectedTutors[student.id]}
-          onChange={value => setSelectedTutors(prev => ({ ...prev, [student.id]: value }))}
-          disabled={getAllocatableTutors(student).length === 0}
-        >
-          {getAllocatableTutors(student).map((tutor: Tutor) => (
-            <Option key={tutor.id} value={tutor.id}>
-              <Space>
-                <UserOutlined />
-                {tutor.name} - {tutor.postcode}
-              </Space>
-            </Option>
-          ))}
-        </Select>
-        {getAllocatableTutors(student).length === 0 && (
-          <>
-            <Text type="warning" style={{ marginLeft: 8 }}>
-            </Text>
-            <Text>No tutor, Set to &quot;waiting&ldquo;</Text>
-          </>
-        )}
-      </li>
-    ))}
-  </ul>
-) : (
-  <Text type="secondary">No students linked to this enquiry.</Text>
-)}</strong></Text>
-
-          {enquiry?.message && (
-            <>
-              <Text><strong>Message:</strong></Text><br />
-              <Text>{enquiry.message}</Text>
-            </>
+          {Array.isArray(enquiry.students) && enquiry.students.length > 0 ? (
+            <ul>
+              {enquiry.students.map((student) => {
+                const allocatableTutors = filterTutors(tutorsData ?? [], student);
+                return (
+                  <li key={student.id} style={{ marginBottom: 16 }}>
+                    <strong>{student.name}</strong>
+                    {student.instruments && (
+                      <> — {Array.isArray(student.instruments) ? student.instruments.join(", ") : student.instruments}</>
+                    )}
+                    <br />
+                    <Select
+                      style={{ width: 220, marginTop: 8 }}
+                      placeholder={allocatableTutors.length === 0 ? "No tutor available" : "Assign tutor"}
+                      loading={tutorsLoading}
+                      value={selectedTutors[student.id]}
+                      onChange={value => setSelectedTutors(prev => ({ ...prev, [student.id]: value }))}
+                      disabled={allocatableTutors.length === 0}
+                    >
+                      {allocatableTutors.map(tutor => (
+                        <Select.Option key={tutor.id} value={tutor.id}>
+                          {tutor.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <Text>No students found.</Text>
           )}
         </Card>
         <div>
@@ -185,7 +141,7 @@ const handleAssign = async () => {
           <Text type="secondary">
           
           </Text>
-          {filteredTutors?.length === 0 && !tutorsLoading && (
+          {filterTutors?.length === 0 && !tutorsLoading && (
             <Text type="warning">
               No active tutors found for {enquiry?.instruments}
             </Text>

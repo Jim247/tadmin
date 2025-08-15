@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useEnquiries, useTutors } from "@/hooks/useEnquiriesAndTutors";
+import { FetchEnquiries, FetchTutors } from "@/hooks/fetchFunctions";
 import { Table, Space, Button, Tag, Spin, Modal, List, message } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import { AssignTutorModal } from "@/components/AssignTutorModal";
 import { Enquiry, Student } from "@/constants/types";
-import formatUkDate from "@/utils/FormatUkDate";
+import formatUkDate from "@/utils/format-uk-date";
 import { getStudentCount } from "@/utils/aggregation-functions";
 import { supabaseClient } from "@/lib/supabase";
 
 
 export default function EnquiriesList() {
-  const { data: enquiries, isLoading, error, refetch } = useEnquiries();
-  const { data: tutors } = useTutors();
+  const { data: enquiries, isLoading, error, refetch } = FetchEnquiries();
+  const { data: tutors } = FetchTutors();
 
 
   // Remove tutors state and fetchTutors logic, use tutors from hook

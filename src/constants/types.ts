@@ -17,7 +17,7 @@ export interface Tutor {
   name: string
   id: string;
   user_id: string;
-  instruments: Instrument[];
+  instruments: string | string[];
   skill_level: string;
   bio?: string;
   hourly_rate?: number;
@@ -62,7 +62,7 @@ export interface Student {
   booking_owner_id: string;
   first_name: string;
   last_name: string;
-  instruments: string[]
+  instruments: string[] | string;
   age?: number;
   notes?: string;
   created_at: string;
@@ -81,8 +81,7 @@ export interface Enquiry {
   id: string;
   student_name: string;
   student_email: string;
-  student_phone?: string;
-  instruments: string;
+  instruments: string[] | string;
   students: Student[];
   level?: string;
   location?: string;

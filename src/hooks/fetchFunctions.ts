@@ -4,7 +4,7 @@ import { Student } from "@/constants/types";
 import { BookingOwner } from "@/constants";
 
 //Fetch and transform Enquiry
-export function useEnquiries() {
+export function FetchEnquiries() {
   return useQuery({
     queryKey: ["enquiries"],
     queryFn: async () => {
@@ -53,7 +53,7 @@ export function useEnquiries() {
 }
 
 //Fetches tutors
-export function useTutors() {
+export function FetchTutors() {
   return useQuery({
     queryKey: ["tutors"],
     queryFn: async () => {
